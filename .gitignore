@@ -1,0 +1,15 @@
+# Visual Studio dočasné súbory
+.vs/
+[Dd]ebug/
+[Rr]elease/
+x64/
+*.user
+*.aps
+*.opendb
+*.pdb
+
+# Qt generované súbory
+GeneratedFiles/
+ui_*.h
+moc_*.cpp
+qrc_*.cpp
