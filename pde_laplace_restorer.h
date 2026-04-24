@@ -12,6 +12,8 @@ class pde_laplace_restorer : public QMainWindow
 public:
     pde_laplace_restorer(QWidget *parent = nullptr);
     ~pde_laplace_restorer();
+    void updateView(QImage image); //aktualizuje scenu v graphicsview a prisposobi zoom novemu obrazku
+    QImage createImageFromU(); //prepocita pdr vektor u spat na obrazok so spravnym preklopenim y
 
 private:
     Ui::pde_laplace_restorerClass ui;
@@ -19,6 +21,7 @@ private:
     int img_height = 0;
     std::vector<double> u;
     std::vector<int> Mask;
+    int total_pixels;
     QImage originalImage;
 
     QGraphicsScene* graphicsScene;
@@ -26,5 +29,6 @@ private:
 
 private slots:
     void on_action_load_triggered();
+    void on_tb_damage_clicked();
 };
 

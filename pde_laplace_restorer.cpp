@@ -4,6 +4,7 @@
 #include "Eigen/Dense"
 #include <QFileDialog>
 #include <QMessageBox>
+#include <random>
 
 pde_laplace_restorer::pde_laplace_restorer(QWidget *parent)
     : QMainWindow(parent)
@@ -19,7 +20,32 @@ pde_laplace_restorer::pde_laplace_restorer(QWidget *parent)
 pde_laplace_restorer::~pde_laplace_restorer()
 {}
 
-void pde_laplace_restorer::on_action_load_triggered() {
+void pde_laplace_restorer::updateView(QImage image) 
+{
+    pixmapItem->setPixmap(QPixmap::fromImage(image)); //premeni vyratany qimage na qpixmap a hodi ho na nas objekt v scene
+    ui.graphicsView->fitInView(pixmapItem, Qt::KeepAspectRatio); //zazoomuje okno tak, aby do neho obrazok presne sadol a nenatiahol sa
+}
+
+QImage pde_laplace_restorer::createImageFromU()
+{
+    QImage img(img_width, img_height, QImage::Format_Grayscale8); //vytvorime uplne prazdny 8-bitovy ciernobiely obrazok (jeden kanal)
+
+    for (int j = 0; j < img_height; j++) { // j = os y (riadky, idu zdola nahor)
+        for (int i = 0; i < img_width; i++) { // i = os x (stlpce, idu zlava doprava)
+            int k = j * img_width + i; 
+            int qt_x = i;
+            int qt_y = (img_height - 1) - j; //preklopenie y
+
+            int val = qRound(u[k]); //vytiahneme intenzitu z vektora u a zaokruhlime na cele cislo
+
+            img.setPixel(qt_x, qt_y, qRgb(val, val, val)); //namiesame odtien sedej (vsetky rgb zlozky su rovnake) a vyfarbime dany pixel
+        }
+    }
+    return img; //vyvratime hotovy obrazok, ktory sa hned moze poslat do updateView
+}
+
+void pde_laplace_restorer::on_action_load_triggered() 
+{
     QString fileName = QFileDialog::getOpenFileName(this, "Load image", "", "Images (*.png *.jpg *.pgm)");
     if (fileName.isEmpty()) {
         QMessageBox::information(this, "Action Canceled", "No image was selected.");
@@ -36,9 +62,10 @@ void pde_laplace_restorer::on_action_load_triggered() {
     img_width = originalImage.width();
     img_height = originalImage.height();
 
-    int total_pixels = img_width * img_height;
+    total_pixels = img_width * img_height;
     u.resize(total_pixels);
     Mask.resize(total_pixels);
+    Mask.assign(total_pixels, 1); //nainicalizujeme vsetky pixely na jednu - su zachovane, obrazik je na zaciatku uplne neposkodeny
 
     for (int j = 0; j < img_height; j++) { // j = os y (riadky)
         for (int i = 0; i < img_width; i++) {  // i = os x (stlpce)
@@ -53,9 +80,36 @@ void pde_laplace_restorer::on_action_load_triggered() {
         }
     }
 
-    pixmapItem->setPixmap(QPixmap::fromImage(originalImage));
-    ui.graphicsView->fitInView(pixmapItem, Qt::KeepAspectRatio);
+    updateView(originalImage);
 
     QMessageBox::information(this, "Success", "Image successfully loaded and processed into the mathematical model.");
 }
 
+void pde_laplace_restorer::on_tb_damage_clicked()
+{
+    if (u.empty()) return;
+
+    int p = ui.sb_damagePercent->value(); //percento pixelov, ktore chceme poskodit
+    int total_pixels = img_width * img_height;
+    int n_to_damage = (total_pixels * p) / 100; //pocet pixelov, ktore chceme poskodit
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, total_pixels - 1);
+
+    int damaged_count = 0;
+    while (damaged_count < n_to_damage) {
+        int k = dis(gen); //vygenerujeme nahodny index od 0 po (total_pixels - 1)
+        
+        if (Mask[k] == 1) { //ak tento pixel stale nie je zmazany (oznaceny 1)
+            Mask[k] = 0;  //tak oznacime ako zmazany
+            u[k] = 0; //a zmazeme vlastne - bude vynulovany, cierny (damage)
+            damaged_count++;
+        }
+    }
+
+    QImage damagedImg = createImageFromU();
+    updateView(damagedImg);
+    QMessageBox::information(this, "Damage Applied",
+        QString("Successfully removed %1 pixels (%2%).").arg(n_to_damage).arg(p));
+}
