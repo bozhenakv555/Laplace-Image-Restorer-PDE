@@ -10,7 +10,7 @@ class pde_laplace_restorer : public QMainWindow
     Q_OBJECT
 
 public:
-    pde_laplace_restorer(QWidget *parent = nullptr);
+    pde_laplace_restorer(QWidget* parent = nullptr);
     ~pde_laplace_restorer();
     void updateView(QImage image); //aktualizuje scenu v graphicsview a prisposobi zoom novemu obrazku
     QImage createImageFromU(); //prepocita pdr vektor u spat na obrazok so spravnym preklopenim y
@@ -30,5 +30,6 @@ private:
 private slots:
     void on_action_load_triggered();
     void on_tb_damage_clicked();
+    void on_tb_restore_clicked();
 };
 

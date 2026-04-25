@@ -113,3 +113,75 @@ void pde_laplace_restorer::on_tb_damage_clicked()
     QMessageBox::information(this, "Damage Applied",
         QString("Successfully removed %1 pixels (%2%).").arg(n_to_damage).arg(p));
 }
+
+void pde_laplace_restorer::on_tb_restore_clicked()
+{
+    if (u.empty()) return;
+
+    int N = img_width * img_height; //celkovy pocet rovnic(riadkov matice)
+
+    Eigen::SparseMatrix<double, Eigen::RowMajor> M(N, N); //pri RowMajor matica sa do pamate uklada po riadkoch
+    Eigen::VectorXd b = Eigen::VectorXd::Zero(N); //VectorXd - dynamicky vector doublov, naplnime ho nulami
+   
+    M.reserve(Eigen::VectorXi::Constant(N, 5)); //rezervujeme v maticu miesto pre maximum 5 nenulovych prvkov v kazdom z N riadkov
+
+    for (int k = 0; k < N; k++) {
+        int j = k / img_width;
+        int i = k % img_width;
+
+        if (Mask[k] == 1) { //pixel nie je vymazany, hodnota intenzity je znama
+            M.insert(k, k) = 1.; //na ho miesto zapiseme jednotku
+            b(k) = u[k]; //a pravu stranu nastavime na tu znamu intenzitu
+        }
+        else {
+            M.insert(k, k) = 4.; //na diagonale su vzdy 4 (ak nemame Dirichletovu OP^)
+
+            //pozerame na horizontalnych susedi
+            if (i == 0) {
+                //sme v prvom stlpci, lavy sused chyba -> robime trik so zrkadlenim - pravy sused (k+1) dostane vahu -2 cim kompenzuje ten lavy
+                M.insert(k, k + 1) = -2.0;
+            }
+            else if (i == img_width - 1) {
+                //sme v poslednom stlpci, pravy sused chyba -> lavy sused (k-1) dostane vahu -2
+                M.insert(k, k - 1) = -2.0;
+            }
+            else {
+                //sme vnutri riadku, obaja susedia existuju, kazdy ma klasickych -1
+                M.insert(k, k - 1) = -1.0;
+                M.insert(k, k + 1) = -1.0;
+            }
+            //pozerame na vertikalnych susedi
+            if (j == 0) {
+                //sme v prvom riadku, dolny sused chyba -> horny sused (k + img_width) dostane -2
+                M.insert(k, k + img_width) = -2.0;
+            }
+            else if (j == img_height - 1) {
+                //sme v poslednom riadku, horny sused chyba -> dolny sused (k - img_width) dostane -2
+                M.insert(k, k - img_width) = -2.0;
+            }
+            else {
+                //sme vnutri stlpca, obaja susedia existuju
+                M.insert(k, k - img_width) = -1.0;
+                M.insert(k, k + img_width) = -1.0;
+            }
+        }
+    }
+    M.makeCompressed();
+    Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+    solver.analyzePattern(M);
+    solver.factorize(M);
+
+    if (solver.info() != Eigen::Success) {
+        QMessageBox::critical(this, "Error", "Couldn't solve the system!");
+        return;
+    }
+
+    Eigen::VectorXd result = solver.solve(b);
+
+    for (int k = 0; k < N; k++) {
+        u[k] = result(k);
+    }
+
+    updateView(createImageFromU());
+    QMessageBox::information(this, "Success", "Image was reconstructed!");
+}
