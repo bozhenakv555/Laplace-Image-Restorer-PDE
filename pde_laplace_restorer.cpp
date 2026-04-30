@@ -23,6 +23,7 @@ pde_laplace_restorer::~pde_laplace_restorer()
 void pde_laplace_restorer::updateView(QImage image) 
 {
     pixmapItem->setPixmap(QPixmap::fromImage(image)); //premeni vyratany qimage na qpixmap a hodi ho na nas objekt v scene
+    graphicsScene->setSceneRect(pixmapItem->boundingRect()); //nastavi hranice sceny presne na velkost obrazka, aby to fitInView spravne vycentrovalo a neskakalo to
     ui.graphicsView->fitInView(pixmapItem, Qt::KeepAspectRatio); //zazoomuje okno tak, aby do neho obrazok presne sadol a nenatiahol sa
 }
 
@@ -38,6 +39,8 @@ QImage pde_laplace_restorer::createImageFromU()
 
             int val = qRound(u[k]); //vytiahneme intenzitu z vektora u a zaokruhlime na cele cislo
 
+            if (val < 0) val = 0;
+            if (val > 255) val = 255;
             img.setPixel(qt_x, qt_y, qRgb(val, val, val)); //namiesame odtien sedej (vsetky rgb zlozky su rovnake) a vyfarbime dany pixel
         }
     }
@@ -167,6 +170,73 @@ void pde_laplace_restorer::on_tb_restore_clicked()
         }
     }
     M.makeCompressed();
+    Eigen::SparseLU<Eigen::SparseMatrix<double>> solver; //pripravime si solver, ktory vyriesi nasu sustavu Mu=b pomocou LU(lower/upper triangle-nenulove prsvky iba pod/nad diagonalou) rozkladu
+    solver.analyzePattern(M); //solver si najprv preskuma strukturu nul v matici, aby vedel ako na nu
+    solver.factorize(M); //tu sa deje samotny LU rozklad
+
+    if (solver.info() != Eigen::Success) {
+        QMessageBox::critical(this, "Error", "Couldn't solve the system!");
+        return;
+    }
+
+    Eigen::VectorXd result = solver.solve(b); //vyriesime rovnicu a vysledne intenzity pixelov ulozime do vektora result
+
+    for (int k = 0; k < N; k++) {
+        u[k] = result(k); //prekopirujeme vyratane hodnoty zo solvera spat do nasho pola u
+    }
+
+    QImage restoredImg=createImageFromU();
+    updateView(restoredImg);
+    QMessageBox::information(this, "Success", "Image was reconstructed!");
+}
+
+void pde_laplace_restorer::on_tb_smooth_clicked()
+{
+    if (u.empty()) return;
+
+    int N = img_width * img_height;
+
+    double lambda = ui.dsb_lambda->value(); //cim mensia lambda, tym viac to rozmaze. cim vacsia, tym viac to ostane ako predtym
+
+    Eigen::SparseMatrix<double, Eigen::RowMajor> M(N, N);
+    Eigen::VectorXd b = Eigen::VectorXd::Zero(N);
+    M.reserve(Eigen::VectorXi::Constant(N, 5));
+
+    for (int k = 0; k < N; k++) {
+        int j = k / img_width;
+        int i = k % img_width;
+
+        //-diagonala a prava strana(fidality term):
+        M.insert(k, k) = 4.0 + lambda; //na diagonalu povodnej matice pripocitame lambda
+        b(k) = lambda * u[k]; //u[k] je teraz nase u_0 (zrekonstruovany obrazok)
+
+        //-susedia a okraje(smoothing term + zrkadlenie - presne ako v restore)
+        // pozerame na horizontalnych susedov
+        if (i == 0) {
+            M.insert(k, k + 1) = -2.0;
+        }
+        else if (i == img_width - 1) {
+            M.insert(k, k - 1) = -2.0;
+        }
+        else {
+            M.insert(k, k - 1) = -1.0;
+            M.insert(k, k + 1) = -1.0;
+        }
+
+        // pozerame na vertikalnych susedov
+        if (j == 0) {
+            M.insert(k, k + img_width) = -2.0;
+        }
+        else if (j == img_height - 1) {
+            M.insert(k, k - img_width) = -2.0;
+        }
+        else {
+            M.insert(k, k - img_width) = -1.0;
+            M.insert(k, k + img_width) = -1.0;
+        }
+    }
+
+    M.makeCompressed();
     Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
     solver.analyzePattern(M);
     solver.factorize(M);
@@ -182,6 +252,13 @@ void pde_laplace_restorer::on_tb_restore_clicked()
         u[k] = result(k);
     }
 
-    updateView(createImageFromU());
-    QMessageBox::information(this, "Success", "Image was reconstructed!");
+    QImage smoothedImg = createImageFromU();
+    updateView(smoothedImg);
+    QMessageBox::information(this, "Success", "The image was smoothed!");
+}
+
+void pde_laplace_restorer::on_tb_showOriginal_clicked()
+{
+    updateView(originalImage);
+    QMessageBox::information(this, "Meow", "Here's the original");
 }

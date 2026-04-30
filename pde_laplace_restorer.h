@@ -31,5 +31,7 @@ private slots:
     void on_action_load_triggered();
     void on_tb_damage_clicked();
     void on_tb_restore_clicked();
+    void on_tb_smooth_clicked();
+    void on_tb_showOriginal_clicked();
 };
 

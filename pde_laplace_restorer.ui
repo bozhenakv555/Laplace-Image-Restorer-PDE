@@ -24,9 +24,15 @@
        <item>
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
-          <string>GroupBox</string>
+          <string/>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <property name="sizeConstraint">
+           <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
+          </property>
+          <property name="rightMargin">
+           <number>14</number>
+          </property>
           <item>
            <widget class="QLabel" name="label">
             <property name="text">
@@ -48,6 +54,25 @@
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string/>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>smoothing parameter (lambda)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="dsb_lambda"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QToolButton" name="tb_damage">
          <property name="text">
           <string>Damage Image</string>
@@ -58,6 +83,20 @@
         <widget class="QToolButton" name="tb_restore">
          <property name="text">
           <string>Restore Image</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="tb_smooth">
+         <property name="text">
+          <string>Smooth Image</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="tb_showOriginal">
+         <property name="text">
+          <string>Show Original Image</string>
          </property>
         </widget>
        </item>
