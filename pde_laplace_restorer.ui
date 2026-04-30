@@ -22,6 +22,20 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
+        <widget class="QComboBox" name="cb_colorMode">
+         <item>
+          <property name="text">
+           <string>Grayscale</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>RGB</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
           <string/>

@@ -19,10 +19,19 @@ private:
     Ui::pde_laplace_restorerClass ui;
     int img_width = 0;
     int img_height = 0;
-    std::vector<double> u;
+
+    std::vector<double> u_r; //red pre RGB 
+    std::vector<double> u_g; //green pre RGB alebo grayscale intenzita
+    std::vector<double> u_b; //blue pre RGB
+    bool isRGB = false;
+
     std::vector<int> Mask;
     int total_pixels;
     QImage originalImage;
+
+    QImage damagedImg;
+    QImage restoredImg;
+    QImage smoothedImg;
 
     QGraphicsScene* graphicsScene;
     QGraphicsPixmapItem* pixmapItem;
